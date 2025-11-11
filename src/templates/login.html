@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; }
+        .login-container { width: 300px; margin: 100px auto; padding: 20px; background: white; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
+        button { width: 100%; padding: 10px; background: #337ab7; color: white; border: none; cursor: pointer; }
+        .flash { padding: 10px; background: #f2dede; color: #a94442; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Device Portal Login</h2>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+        <form method="post">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+</html>

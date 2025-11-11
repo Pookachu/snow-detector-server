@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; text-align: center; }
+        .logout-btn { float: right; }
+        .labeling-container { max-width: 800px; margin: 40px auto; }
+        #image-to-label {
+            max-width: 100%;
+            border: 2px solid #333;
+            min-height: 480px;
+            background-color: #f4f4f4;
+        }
+        .controls { margin-top: 20px; }
+        .controls button {
+            font-size: 24px;
+            padding: 15px 30px;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+        #btn-snowy { background-color: #aaddff; }
+        #btn-not-snowy { background-color: #ffc8a2; }
+        #status-message { margin-top: 20px; font-size: 18px; color: #555; }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('main.logout') }}" class="logout-btn">Logout</a>
+    <h1>Labeling Dashboard</h1>
+
+    <div class="labeling-container">
+        <img id="image-to-label" src="" alt="Image to label"/>
+
+        <div class="controls">
+            <button id="btn-not-snowy">Not Snowy</button>
+            <button id="btn-snowy">Snowy</button>
+        </div>
+
+        <div id="status-message"></div>
+    </div>
+
+    <script>
+        // Get references to all our elements
+        const imageEl = document.getElementById('image-to-label');
+        const statusEl = document.getElementById('status-message');
+        const snowyBtn = document.getElementById('btn-snowy');
+        const notSnowyBtn = document.getElementById('btn-not-snowy');
+
+        let currentImageId = null;
+
+        // Function to load the next unlabeled image
+        async function loadNextImage() {
+            statusEl.textContent = 'Loading next image...';
+            try {
+                const response = await fetch("{{ url_for('main.get_next_image') }}");
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    imageEl.src = data.image_url;
+                    currentImageId = data.image_id;
+                    statusEl.textContent = `Viewing Image ID: ${currentImageId}`;
+                    // Re-enable buttons
+                    snowyBtn.disabled = false;
+                    notSnowyBtn.disabled = false;
+                } else {
+                    statusEl.textContent = data.message; // "No more images to label!"
+                    imageEl.style.display = 'none';
+                    snowyBtn.disabled = true;
+                    notSnowyBtn.disabled = true;
+                }
+            } catch (err) {
+                statusEl.textContent = 'Error loading image.';
+                console.error(err);
+            }
+        }
+
+        // Function to send a label to the server
+        async function submitLabel(label) {
+            if (!currentImageId) return;
+
+            // Disable buttons to prevent double-clicks
+            snowyBtn.disabled = true;
+            notSnowyBtn.disabled = true;
+            statusEl.textContent = 'Saving label...';
+
+            try {
+                const response = await fetch(`/api/label-image/${currentImageId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ label: label }),
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // Load the next image
+                    loadNextImage();
+                } else {
+                    statusEl.textContent = data.message;
+                }
+            } catch (err) {
+                statusEl.textContent = 'Error saving label.';
+                console.error(err);
+            }
+        }
+
+        // Add event listeners to the buttons
+        snowyBtn.addEventListener('click', () => submitLabel('snowy'));
+        notSnowyBtn.addEventListener('click', () => submitLabel('not_snowy'));
+
+        // Load the first image when the page starts
+        // We use the 'first_image' object passed from the route
+        document.addEventListener('DOMContentLoaded', () => {
+            {% if first_image %}
+                imageEl.src = "{{ url_for('main.get_uploaded_image', filename=first_image.filename) }}";
+                currentImageId = {{ first_image.id }};
+                statusEl.textContent = `Viewing Image ID: ${currentImageId}`;
+            {% else %}
+                statusEl.textContent = 'No images to label!';
+                imageEl.style.display = 'none';
+                snowyBtn.disabled = true;
+                notSnowyBtn.disabled = true;
+            {% endif %}
+        });
+    </script>
+</body>
+</html>
